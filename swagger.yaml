@@ -1,0 +1,371 @@
+openapi: 3.0.0
+info:
+  title: Crypto Price Alert Service
+  description: >
+    Extended API supporting multiple alert types (above, below, range, percentage_drop) 
+    and alert history logs.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:3000
+    description: Local dev server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # -------------------------
+    # Auth (same as before)
+    # -------------------------
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    # -------------------------
+    # Alert
+    # -------------------------
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 10
+        symbol:
+          type: string
+          example: "BTC"
+        conditionType:
+          type: string
+          description: "Type of condition: above, below, range, or percentage_drop"
+          enum: [above, below, range, percentage_drop]
+          example: "above"
+        threshold:
+          type: number
+          format: float
+          description: "Used for above/below conditions"
+          example: 30000
+        rangeLow:
+          type: number
+          format: float
+          description: "Used for range condition: lower bound"
+          example: 25000
+        rangeHigh:
+          type: number
+          format: float
+          description: "Used for range condition: upper bound"
+          example: 27000
+        percentChange:
+          type: number
+          format: float
+          description: "Used for percentage_drop or percentage_rise"
+          example: 10
+        timeWindow:
+          type: string
+          description: "Time window for the percentage condition, e.g. '24h'"
+          example: "24h"
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAlertRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+          example: "BTC"
+        conditionType:
+          type: string
+          enum: [above, below, range, percentage_drop]
+          example: "above"
+        threshold:
+          type: number
+          format: float
+          description: "Required for above/below"
+        rangeLow:
+          type: number
+          format: float
+          description: "Required for range"
+        rangeHigh:
+          type: number
+          format: float
+          description: "Required for range"
+        percentChange:
+          type: number
+          format: float
+          description: "Required for percentage_drop"
+        timeWindow:
+          type: string
+          description: "e.g. '24h' for percentage_drop"
+      required:
+        - symbol
+        - conditionType
+
+    # -------------------------
+    # Alert History
+    # -------------------------
+    AlertHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        alertId:
+          type: integer
+          example: 42
+        triggeredAt:
+          type: string
+          format: date-time
+          example: "2023-08-31T12:00:00Z"
+        notificationSent:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Triggered at price=26000 for symbol=BTC"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedAlertsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        totalItems:
+          type: integer
+        currentPage:
+          type: integer
+        perPage:
+          type: integer
+        totalPages:
+          type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ----------------------------------
+  # Auth Endpoints (Optional Example)
+  # ----------------------------------
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Bad request
+        "409":
+          description: Email already in use
+        "500":
+          description: Internal server error
+
+  /auth/login:
+    post:
+      summary: Login (obtain JWT token)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+        "500":
+          description: Internal server error
+
+  # ----------------------------------
+  # Alerts Endpoints
+  # ----------------------------------
+  /alerts:
+    get:
+      summary: Get all alerts for the authenticated user (paginated optional)
+      description: Returns alerts based on userId.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: perPage
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAlertsResponse"
+        "401":
+          description: Unauthorized
+    post:
+      summary: Create a new alert with advanced conditions
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertRequest"
+      responses:
+        "201":
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+
+  /alerts/{id}:
+    delete:
+      summary: Delete an alert by ID
+      description: Only the alert's owner can delete it.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Alert ID
+      responses:
+        "200":
+          description: Alert deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Alert not found
+        "500":
+          description: Internal server error
+
+  /alerts/{id}/history:
+    get:
+      summary: Get the trigger history of a specific alert
+      description: Returns an array of AlertHistory entries for the given alert ID.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Alert ID
+      responses:
+        "200":
+          description: Success - list of AlertHistory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertHistory"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Alert not found
+        "500":
+          description: Internal server error
