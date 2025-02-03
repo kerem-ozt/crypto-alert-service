@@ -9,6 +9,7 @@ const { getOldPrice } = require('./getOldPrice');
 const symbolToCoinId = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
+  DOGE: 'dogecoin',
 };
 
 const PRICE_CACHE_KEY_PREFIX = 'COIN_PRICE_';
