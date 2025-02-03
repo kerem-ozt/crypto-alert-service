@@ -13,6 +13,7 @@ const swaggerUi = require("@fastify/swagger-ui");
 const fastifyHelmet = require("@fastify/helmet");
 const fastifyRateLimit = require("@fastify/rate-limit");
 const path = require('path');
+require('dotenv').config();
 
 async function buildServer() {
   fastify.register(swagger, {
@@ -33,8 +34,11 @@ async function buildServer() {
     exposeRoute: true
   });
 
-  fastify.register(require('fastify-jwt'), { secret: "YOUR_SECRET_KEY" });
-
+  console.error(process.env.JWT_SECRET)
+  fastify.register(require('fastify-jwt'), {
+    secret: process.env.JWT_SECRET || "biLira"
+  });
+  
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.raw.url.startsWith('/alerts')) {
       try {

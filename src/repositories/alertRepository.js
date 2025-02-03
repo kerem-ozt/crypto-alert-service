@@ -1,17 +1,11 @@
 // src/repositories/alertRepository.js
 const { Alert, User } = require('../models');
+require('dotenv').config();
 
 class AlertRepository {
   async createAlert(data) {
     const alert = await Alert.create(data);
     return alert;
-  }
-
-  async findAlertsByUserId1(userId) {
-    return Alert.findAll({
-      where: { userId },
-      include: [{ model: User, attributes: ['email'] }],
-    });
   }
 
   async findAlertsByUserId(userId, page = 1, perPage = 10) {
