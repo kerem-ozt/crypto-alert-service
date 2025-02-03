@@ -1,11 +1,12 @@
 const userRepository = require('../repositories/userRepository');
 const bcrypt = require('bcrypt');
 const redisClient = require('./redisClient');
+require('dotenv').config();
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || '10', 10);;
 
-const ACCESS_TOKEN_EXP = '45m';
-const REFRESH_TOKEN_EXP = 7 * 24 * 60 * 60;
+const ACCESS_TOKEN_EXP = process.env.ACCESS_TOKEN_EXP || '45m';
+const REFRESH_TOKEN_EXP = parseInt(process.env.REFRESH_TOKEN_EXP || '604800', 10);
 
 class AuthService {
   constructor(fastify) {
