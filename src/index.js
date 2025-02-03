@@ -78,7 +78,7 @@ async function startServer() {
 
     startCronJob();
 
-    await app.listen({ port: 3000 });
+    await app.listen({ port: 3000, host: process.env.HOST });
     logger.info('Server running on http://localhost:3000');
   } catch (err) {
     console.error(err);
